@@ -29,22 +29,55 @@ window.onload = function() {
         line.push(end);
         court_new.push(line);
     }
-    console.log(court_new);
+    var drag_start_position=[],drag_end_position=[];
+    var click_points=[];
+    var drag_plate=[];
+    var current_time;
 	update();
-
+    /*merge to mouse down
+    window.addEventListener("click",function(e){
+        var x=e.clientX,y=e.clientY;
+        click_points.push([x,y,30]);
+    });
+    */
+    window.addEventListener("mousedown",function(e){
+        var x=e.clientX,y=e.clientY;
+        current_time=Math.floor(new Date());
+        drag_start_position.push(x);
+        drag_start_position.push(y);
+        drag_plate=[x,y,0];
+        click_points.push([x,y,30]);
+    });
+    window.addEventListener("mousemove",function(e){
+        var x=e.clientX,y=e.clientY;
+        drag_end_position=[];
+        drag_end_position=[x,y];
+        var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
+        var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
+        var angle=drag_end.subtract(drag_start).getAngle();
+        var label=Math.floor(((angle*180/Math.PI+360-30)%360)/60);
+        drag_plate[2]=label;
+    });
+    window.addEventListener("mouseup",function(e){
+        console.log([current_time,drag_plate[0],drag_plate[1],drag_plate[2]]);
+        drag_start_position=[];
+        drag_end_position=[];
+        drag_plate=[];
+        
+    });
 	function update() {
 		context.clearRect(0, 0, width, height);
-
-        drawBadmintonCourt(context,court_new)
-		
-		//requestAnimationFrame(update);
+        drawBadmintonCourt(context,court_new);
+        draw_click_circle(context,click_points);
+        draw_drag_line(context,drag_start_position,drag_end_position);
+        draw_plate(context,drag_plate);
+		requestAnimationFrame(update);
+        
 	}
     function drawBadmintonCourt(context,court_new){
-        
         context.save();
         context.strokeStyle = '#ff0000';
         context.lineWidth = 40 * ratio;
-        
         for (var i =0;i<court_new.length;i++){
             var start=court_new[i][0];
             var end=court_new[i][1];
@@ -58,5 +91,62 @@ window.onload = function() {
         context.lineTo(end[0],end[1]);
         context.closePath();
         context.stroke();
+    }
+    function draw_click_circle(context,click_points){
+        for(var i=0;i<click_points.length;i++){
+            var point=click_points[i];
+            context.save();
+            context.fillStyle="rgba(0,0,255,"+(point[2]/30)+")";
+            point[2]-=1;
+            context.beginPath();
+            context.arc(point[0],point[1],10,0,2*Math.PI);
+            context.closePath();
+            context.fill();
+            context.restore()
+        }
+        for(var i=0;i<click_points.length;i++){
+            var point=click_points[i];
+            if (point[2]==0){
+                click_points.splice(i, 1);
+            }
+        }
+    }
+    function draw_drag_line(context,drag_start_position,drag_end_position){
+        if(drag_start_position.length*drag_end_position.length!=0){
+            context.save();
+            context.strokeStyle="rgba(128,128,0,1)";
+            draw_line(context,drag_start_position,drag_end_position);
+            context.restore();
+        }
+        
+    }
+    function draw_plate(context,drag_plate){
+        if (drag_plate.length!=0){
+            context.save();
+            var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
+            var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
+            var drag_length=(drag_start.subtract(drag_end)).getLength();
+            context.strokeStyle="rgba(0,0,0,"+Math.min(1,drag_length/100)+")";
+            context.fillStyle="rgba(255,255,0,"+Math.min(1,drag_length/100)+")";
+            var v=vector.create(100,0);
+            var ori=vector.create(drag_plate[0],drag_plate[1]);
+            for(var i=0;i<6;i++){
+                v.setAngle(Math.PI*i/3-Math.PI/6);
+                var newv=ori.add(v);
+                draw_line(context,[ori.getX(),ori.getY()],[newv.getX(),newv.getY()]);
+            }
+            context.beginPath();
+            context.moveTo(ori.getX(),ori.getY());
+            v.setAngle(Math.PI*drag_plate[2]/3+Math.PI/6);
+            newv=ori.add(v);
+            context.lineTo(newv.getX(),newv.getY());
+            v.setAngle(Math.PI*(drag_plate[2]+1)/3+Math.PI/6);
+            newv=ori.add(v);
+            context.lineTo(newv.getX(),newv.getY());
+            context.fill();
+            
+            context.restore();
+        }
+        
     }
 };
