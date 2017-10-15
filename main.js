@@ -31,6 +31,7 @@ window.onload = function() {
     }
     var drag_start_position=[],drag_end_position=[];
     var click_points=[];
+    var current_point=[];
     var drag_plate=[];
     var current_time;
 	update();
@@ -47,28 +48,61 @@ window.onload = function() {
         drag_start_position.push(y);
         drag_plate=[x,y,0];
         click_points.push([x,y,30]);
+        current_point=[x,y];
     });
     window.addEventListener("mousemove",function(e){
-        var x=e.clientX,y=e.clientY;
-        drag_end_position=[];
-        drag_end_position=[x,y];
-        var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
-        var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
-        var angle=drag_end.subtract(drag_start).getAngle();
-        var label=Math.floor(((angle*180/Math.PI+360-30)%360)/60);
-        drag_plate[2]=label;
+        
+        if (current_point.length!=0){
+            
+            var x=e.clientX,y=e.clientY;
+            if (current_point[0]!=x&&current_point[1]!=y){
+                drag_end_position=[];
+                drag_end_position=[x,y];
+            }
+            var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
+            var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
+            var angle=drag_end.subtract(drag_start).getAngle();
+            var label=Math.floor(((angle*180/Math.PI+360-30)%360)/60);
+            drag_plate[2]=label;
+            
+        }
     });
     window.addEventListener("mouseup",function(e){
         console.log([current_time,drag_plate[0],drag_plate[1],drag_plate[2]]);
         drag_start_position=[];
         drag_end_position=[];
         drag_plate=[];
+        current_point=[];
         
     });
+    
+    window.addEventListener("touchstart", getBallXY, false);
+	window.addEventListener("touchmove", handleTouchMove, false);
+	window.addEventListener("touchend", handleTouchEnd, false);
+    
 	function update() {
+        
 		context.clearRect(0, 0, width, height);
+        var t =Math.floor(new Date());
+        //console.log(drag_end_position+t.toString());
+        if (current_point.length!=0&&drag_end_position.length==0){
+            
+            var t =Math.floor(new Date());
+            var progress_sec=Math.min(1,(t-current_time)/1000/0.5);
+            if (progress_sec==1){
+                console.log("lalala");
+                
+            }
+            context.beginPath();
+            context.arc(current_point[0],current_point[1],70,0,progress_sec*2*Math.PI);
+            //context.closePath();
+            context.stroke();
+            
+        }
+        
         drawBadmintonCourt(context,court_new);
         draw_click_circle(context,click_points);
+        
         draw_drag_line(context,drag_start_position,drag_end_position);
         draw_plate(context,drag_plate);
 		requestAnimationFrame(update);
@@ -121,7 +155,7 @@ window.onload = function() {
         
     }
     function draw_plate(context,drag_plate){
-        if (drag_plate.length!=0){
+        if (drag_plate.length!=0&&drag_end_position.length!=0){
             context.save();
             var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
             var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
@@ -149,4 +183,56 @@ window.onload = function() {
         }
         
     }
+    function getBallXY(event)
+    {
+        var touchobj = event.changedTouches[0];  // reference first touch point (ie: first finger)
+        
+
+        var x=touchobj.clientX,y=touchobj.clientY;
+        current_time=Math.floor(new Date());
+        drag_start_position.push(x);
+        drag_start_position.push(y);
+        drag_plate=[x,y,0];
+        click_points.push([x,y,30]);
+        current_point=[x,y];
+
+
+        
+        //event.preventDefault();
+    }
+
+    function handleTouchMove(event)
+    {
+        
+        if (current_point.length!=0){
+            var touchobj = event.changedTouches[0];		// reference first touch point for this event
+            var x=touchobj.clientX,y=touchobj.clientY;
+            
+            if (current_point[0]!=x&&current_point[1]!=y){
+                drag_end_position=[];
+                drag_end_position=[x,y];
+            }
+            var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
+            var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
+            var angle=drag_end.subtract(drag_start).getAngle();
+            var label=Math.floor(((angle*180/Math.PI+360-30)%360)/60);
+            drag_plate[2]=label;
+            
+        }
+       
+        //event.preventDefault();
+    }
+
+    function handleTouchEnd(event)
+    {
+        
+        console.log([current_time,drag_plate[0],drag_plate[1],drag_plate[2]]);
+        drag_start_position=[];
+        drag_end_position=[];
+        drag_plate=[];
+        current_point=[];
+        
+        //event.preventDefault();
+    }
+    
 };
