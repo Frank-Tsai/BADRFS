@@ -29,82 +29,60 @@ window.onload = function() {
         line.push(end);
         court_new.push(line);
     }
-    var drag_start_position=[],drag_end_position=[];
-    var click_points=[];
-    var current_point=[];
-    var drag_plate=[];
+    var x_slot=[];
+    var y_slot=[];
+    
+    for(i=0;i<7;i++){
+        x_slot.push((13400*i/6+800)*ratio+paddingleft);
+    }
+    for(i=0;i<3;i++){
+        y_slot.push((6100*i/2+500)*ratio+paddingtop);
+    }
+    var click_area=[];
+    var current_area=-1;
     var current_time;
-	update();
-    /*merge to mouse down
-    window.addEventListener("click",function(e){
-        var x=e.clientX,y=e.clientY;
-        click_points.push([x,y,30]);
-    });
-    */
-    window.addEventListener("mousedown",function(e){
-        var x=e.clientX,y=e.clientY;
-        current_time=Math.floor(new Date());
-        drag_start_position.push(x);
-        drag_start_position.push(y);
-        drag_plate=[x,y,0];
-        click_points.push([x,y,30]);
-        current_point=[x,y];
-    });
-    window.addEventListener("mousemove",function(e){
-        
-        if (current_point.length!=0){
+    var key_map=Array.apply(null, Array(200)).map(Number.prototype.valueOf,0);
+    var counter=0;
+    var initial=1;
+    current_area=counter;
+    window.addEventListener("keydown",function(e){
+        if(counter<12&&initial==1){
             
-            var x=e.clientX,y=e.clientY;
-            if (current_point[0]!=x&&current_point[1]!=y){
-                drag_end_position=[];
-                drag_end_position=[x,y];
-            }
-            var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
-            var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
-            var angle=drag_end.subtract(drag_start).getAngle();
-            var label=Math.floor(((angle*180/Math.PI+360-30)%360)/60);
-            drag_plate[2]=label;
-            
+            key_map[e.keyCode]=counter;
+            counter+=1;
+            current_area=counter;
+        }else{
+            initial=0;
+            current_area=key_map[e.keyCode];
         }
     });
-    window.addEventListener("mouseup",function(e){
-        console.log([current_time,drag_plate[0],drag_plate[1],drag_plate[2]]);
-        drag_start_position=[];
-        drag_end_position=[];
-        drag_plate=[];
-        current_point=[];
+    window.addEventListener("keyup",function(e){
+        if(initial!=1){
+            current_area=-1;
+        }
+        
         
     });
+	update();
     
-    window.addEventListener("touchstart", getBallXY, false);
-	window.addEventListener("touchmove", handleTouchMove, false);
-	window.addEventListener("touchend", handleTouchEnd, false);
+    
     
 	function update() {
         
 		context.clearRect(0, 0, width, height);
         var t =Math.floor(new Date());
-        //console.log(drag_end_position+t.toString());
-        if (current_point.length!=0&&drag_end_position.length==0){
+        if (current_area>=0){
+            context.save();
+            context.fillStyle="rgba(255,255,0,1)";
+            var a=current_area%6,b=Math.floor(current_area/6);
             
-            var t =Math.floor(new Date());
-            var progress_sec=Math.min(1,(t-current_time)/1000/0.5);
-            if (progress_sec==1){
-                console.log("lalala");
-                
-            }
-            context.beginPath();
-            context.arc(current_point[0],current_point[1],70,0,progress_sec*2*Math.PI);
-            //context.closePath();
-            context.stroke();
-            
+            context.fillRect(x_slot[a],y_slot[b],x_slot[a+1]-x_slot[a],y_slot[b+1]-y_slot[b]);
+            context.restore();
         }
         
-        drawBadmintonCourt(context,court_new);
-        draw_click_circle(context,click_points);
         
-        draw_drag_line(context,drag_start_position,drag_end_position);
-        draw_plate(context,drag_plate);
+        drawBadmintonCourt(context,court_new);
+        //draw_area(context,click_area);
 		requestAnimationFrame(update);
         
 	}
@@ -126,113 +104,6 @@ window.onload = function() {
         context.closePath();
         context.stroke();
     }
-    function draw_click_circle(context,click_points){
-        for(var i=0;i<click_points.length;i++){
-            var point=click_points[i];
-            context.save();
-            context.fillStyle="rgba(0,0,255,"+(point[2]/30)+")";
-            point[2]-=1;
-            context.beginPath();
-            context.arc(point[0],point[1],10,0,2*Math.PI);
-            context.closePath();
-            context.fill();
-            context.restore()
-        }
-        for(var i=0;i<click_points.length;i++){
-            var point=click_points[i];
-            if (point[2]==0){
-                click_points.splice(i, 1);
-            }
-        }
-    }
-    function draw_drag_line(context,drag_start_position,drag_end_position){
-        if(drag_start_position.length*drag_end_position.length!=0){
-            context.save();
-            context.strokeStyle="rgba(128,128,0,1)";
-            draw_line(context,drag_start_position,drag_end_position);
-            context.restore();
-        }
-        
-    }
-    function draw_plate(context,drag_plate){
-        if (drag_plate.length!=0&&drag_end_position.length!=0){
-            context.save();
-            var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
-            var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
-            var drag_length=(drag_start.subtract(drag_end)).getLength();
-            context.strokeStyle="rgba(0,0,0,"+Math.min(1,drag_length/100)+")";
-            context.fillStyle="rgba(255,255,0,"+Math.min(1,drag_length/100)+")";
-            var v=vector.create(100,0);
-            var ori=vector.create(drag_plate[0],drag_plate[1]);
-            for(var i=0;i<6;i++){
-                v.setAngle(Math.PI*i/3-Math.PI/6);
-                var newv=ori.add(v);
-                draw_line(context,[ori.getX(),ori.getY()],[newv.getX(),newv.getY()]);
-            }
-            context.beginPath();
-            context.moveTo(ori.getX(),ori.getY());
-            v.setAngle(Math.PI*drag_plate[2]/3+Math.PI/6);
-            newv=ori.add(v);
-            context.lineTo(newv.getX(),newv.getY());
-            v.setAngle(Math.PI*(drag_plate[2]+1)/3+Math.PI/6);
-            newv=ori.add(v);
-            context.lineTo(newv.getX(),newv.getY());
-            context.fill();
-            
-            context.restore();
-        }
-        
-    }
-    function getBallXY(event)
-    {
-        var touchobj = event.changedTouches[0];  // reference first touch point (ie: first finger)
-        
-
-        var x=touchobj.clientX,y=touchobj.clientY;
-        current_time=Math.floor(new Date());
-        drag_start_position.push(x);
-        drag_start_position.push(y);
-        drag_plate=[x,y,0];
-        click_points.push([x,y,30]);
-        current_point=[x,y];
-
-
-        
-        //event.preventDefault();
-    }
-
-    function handleTouchMove(event)
-    {
-        
-        if (current_point.length!=0){
-            var touchobj = event.changedTouches[0];		// reference first touch point for this event
-            var x=touchobj.clientX,y=touchobj.clientY;
-            
-            if (current_point[0]!=x&&current_point[1]!=y){
-                drag_end_position=[];
-                drag_end_position=[x,y];
-            }
-            var drag_start=vector.create(drag_start_position[0],drag_start_position[1]);
-            var drag_end=vector.create(drag_end_position[0],drag_end_position[1]);
-            var angle=drag_end.subtract(drag_start).getAngle();
-            var label=Math.floor(((angle*180/Math.PI+360-30)%360)/60);
-            drag_plate[2]=label;
-            
-        }
-       
-        //event.preventDefault();
-    }
-
-    function handleTouchEnd(event)
-    {
-        
-        console.log([current_time,drag_plate[0],drag_plate[1],drag_plate[2]]);
-        drag_start_position=[];
-        drag_end_position=[];
-        drag_plate=[];
-        current_point=[];
-        
-        //event.preventDefault();
-    }
+    
     
 };
