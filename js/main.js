@@ -1,4 +1,5 @@
 window.onload = function() {
+    var gametime=Math.floor(new Date());
 	var canvas = document.getElementById("canvas"),
 		context = canvas.getContext("2d"),
 		width = canvas.width = window.innerWidth,
@@ -20,6 +21,7 @@ window.onload = function() {
 [[800,500+460+2570],[800+760+3920,500+460+2570]],[[800+760+3920+4000,500+460+2570],[800+760+3920+4000+3920+760,500+460+2570]],[[800+760+3920+2000,500],[800+760+3920+2000,500+460+2570+2570+460]]];
     var paddingleft=(width-courtWidth)/2;
     var paddingtop=(height-courtHeight)/2;
+    console.log(paddingleft,paddingtop);
     var court_new=[]
     for (var i =0;i<court.length;i++){
         var line=[]
@@ -34,6 +36,8 @@ window.onload = function() {
     var current_point=[];
     var drag_plate=[];
     var current_time;
+    var lock=0;
+    var data=[];
 	update();
     /*merge to mouse down
     window.addEventListener("click",function(e){
@@ -66,9 +70,16 @@ window.onload = function() {
             drag_plate[2]=label;
             
         }
+        
     });
     window.addEventListener("mouseup",function(e){
-        console.log([current_time,drag_plate[0],drag_plate[1],drag_plate[2]]);
+        if(lock==1){//last
+            lock=0;
+        }else{
+            console.log([current_time,(drag_plate[0]-paddingleft)/ratio,(drag_plate[1]-paddingtop)/ratio,drag_plate[2]]);
+            data.push([current_time,(drag_plate[0]-paddingleft)/ratio,(drag_plate[1]-paddingtop)/ratio,drag_plate[2]]);
+        }
+        
         drag_start_position=[];
         drag_end_position=[];
         drag_plate=[];
@@ -89,8 +100,12 @@ window.onload = function() {
             
             var t =Math.floor(new Date());
             var progress_sec=Math.min(1,(t-current_time)/1000/0.5);
-            if (progress_sec==1){
-                console.log("lalala");
+            if (progress_sec==1&&lock==0){
+                lock=1;
+                console.log([current_time,(drag_plate[0]-paddingleft)/ratio,(drag_plate[1]-paddingtop)/ratio,drag_plate[2]]);
+                data.push([current_time,(drag_plate[0]-paddingleft)/ratio,(drag_plate[1]-paddingtop)/ratio,drag_plate[2]]);
+                send_data(gametime,data);
+                data=[];
                 
             }
             context.beginPath();
@@ -225,8 +240,12 @@ window.onload = function() {
 
     function handleTouchEnd(event)
     {
-        
-        console.log([current_time,drag_plate[0],drag_plate[1],drag_plate[2]]);
+        if(lock==1){//last
+            lock=0;
+        }else{
+            console.log([current_time,(drag_plate[0]-paddingleft)/ratio,(drag_plate[1]-paddingtop)/ratio,drag_plate[2]]);
+            data.push([current_time,(drag_plate[0]-paddingleft)/ratio,(drag_plate[1]-paddingtop)/ratio,drag_plate[2]]);
+        }
         drag_start_position=[];
         drag_end_position=[];
         drag_plate=[];
@@ -234,5 +253,24 @@ window.onload = function() {
         
         //event.preventDefault();
     }
-    
+    function send_data(gametime,data){
+        $.ajax({
+            "url":"php/insert.php",
+            "dataType":"json",
+            "type":"POST",
+            "data":JSON.stringify({"gametime":gametime,"data":data}),
+            "success":function(data){
+                if(data.error){
+                    alert(data.error);
+                    console.log(data.message);
+                }else{
+                    console.log(data.message);
+                }
+            },
+            "error":function(data){
+                alert(data);
+                
+            }
+        });
+    }
 };
